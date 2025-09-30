@@ -5,7 +5,7 @@ A powerful web-based geospatial analytics platform that leverages Google Earth E
 ![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
 ![Flask](https://img.shields.io/badge/Flask-2.0+-green.svg)
 ![Google Earth Engine](https://img.shields.io/badge/Google%20Earth%20Engine-Enabled-orange.svg)
-![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 
 ## ✨ Features
 

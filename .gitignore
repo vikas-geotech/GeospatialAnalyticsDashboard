@@ -1,13 +1,14 @@
-# Ignore environment variables
+# Ignore environment files
 *.env
 
 # Ignore Python cache
 __pycache__/
 *.pyc
-
-# Ignore virtual environment folders
 venv/
-.env/
+
+# Ignore Node/Frontend junk
+node_modules/
+dist/
 
 # Ignore OS-specific files
 .DS_Store

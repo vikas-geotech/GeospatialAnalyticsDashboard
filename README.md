@@ -33,7 +33,7 @@ Before you begin, ensure you have the following installed:
 ### 1. Clone the Repository
 
 \`\`\`bash
-git clone https://github.com/yourusername/geospatial-analytics-dashboard.git
+git clone https://github.com/vikas-geotech/GeospatialAnalyticsDashboard.git
 cd geospatial-analytics-dashboard
 \`\`\`
 
@@ -225,7 +225,7 @@ Contributions are welcome! Please follow these steps:
 
 Vikas Kumar Gupta -  [Email-ID] vkgupta0495@gmail.com
 
-Project Link: 
+Project Link: https://github.com/vikas-geotech/GeospatialAnalyticsDashboard
 
 ## 🐛 Known Issues
 

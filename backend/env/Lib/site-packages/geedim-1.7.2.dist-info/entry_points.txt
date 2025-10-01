@@ -1,0 +1,2 @@
+[console_scripts]
+geedim = geedim.cli:cli

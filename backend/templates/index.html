@@ -1,0 +1,1136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Geospatial Analytics Dashboard</title>
+     
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Inter", sans-serif;
+            background-color: #f5f5f5;
+            overflow: hidden;
+        }
+
+        .header {
+            background: #609e58;
+            color: white;
+            padding: 15px 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 40px;
+        }
+
+        .container {
+            display: flex;
+            height: calc(100vh - 70px);
+        }
+
+        .sidebar {
+            width: 400px;
+            background: white;
+            padding: 20px;
+            overflow-y: auto;
+            border-right: 2px solid #ddd;
+        }
+
+        .map-area {
+            flex: 1;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #map {
+            flex: 1;
+            width: 100%;
+            cursor: crosshair;
+        }
+
+        .chart-container {
+            height: 400px;
+            background: white;
+            border-top: 2px solid #ddd;
+            padding: 15px;
+            display: block;
+            transition: height 0.3s ease;
+            position: relative;
+        }
+
+        .chart-container.minimized {
+            height: 60px;
+            overflow: hidden;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+
+        .chart-controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+        }
+
+        .chart-controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+            cursor: pointer;
+        }
+
+        .chart-controls input[type="radio"], .chart-controls input[type="checkbox"] {
+            margin: 0;
+        }
+
+        .toggle-btn {
+            background: #609e58;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .toggle-btn:hover {
+            background: #4a7a43;
+        }
+
+        .dataset-toggles {
+            display: flex;
+            gap: 10px;
+            margin-left: 20px;
+        }
+
+        #timeSeriesChart {
+            height: 200px;
+        }
+
+        .pixel-info {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            padding: 10px;
+            border-radius: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+            font-size: 12px;
+            max-width: 200px;
+            display: none;
+        }
+
+        .section {
+            margin-bottom: 25px;
+            padding: 15px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .section h3 {
+            color: #2d5a27;
+            margin-bottom: 15px;
+            font-size: 16px;
+        }
+
+        .upload-box {
+            border: 2px dashed #2d5a27;
+            padding: 30px;
+            text-align: center;
+            background: #f0f8f0;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+
+        .upload-box:hover {
+            background: #e8f5e8;
+        }
+
+        .upload-text {
+            color: #2d5a27;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .file-info {
+            font-size: 12px;
+            color: #666;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+
+        .form-input:focus, .form-select:focus {
+            border-color: #2d5a27;
+            outline: none;
+        }
+
+        .date-row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .date-row .form-input {
+            flex: 1;
+            font-weight: bold;
+        }
+
+        .checkbox-list {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .checkbox-item input {
+            width: 16px;
+            height: 16px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 15px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .btn-primary {
+            background: #2d5a27;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #1f3d1b;
+        }
+
+        .btn-primary:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            border: 1px solid #ccc;
+        }
+
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+
+        .results {
+            background: #e8f5e8;
+            border: 1px solid #2d5a27;
+            border-radius: 8px;
+            padding: 15px;
+            display: none;
+        }
+
+        .results h4 {
+            color: #2d5a27;
+            margin-bottom: 10px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid #d0d0d0;
+        }
+
+        .stat-label {
+            font-weight: bold;
+        }
+
+        .stat-value {
+            color: #2d5a27;
+            font-weight: bold;
+        }
+
+        .layer-controls {
+            background: #f9f9f9;
+            border: 1px solid #2d5a27;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .layer-controls h4 {
+            color: #2d5a27;
+            margin-bottom: 10px;
+            font-size: 14px;
+        }
+
+        .layer-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 8px;
+        }
+
+        .layer-item input[type="checkbox"] {
+            width: 16px;
+            height: 16px;
+        }
+
+        .layer-item label {
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .loading {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: none;
+            z-index: 1000;
+        }
+
+        .loading-text {
+            text-align: center;
+            color: #2d5a27;
+            font-weight: bold;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid #f0f0f0;
+            border-top: 3px solid #2d5a27;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 10px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .message {
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                width: 100%;
+                height: 300px;
+            }
+            
+            .map-area {
+                height: 400px;
+            }
+            
+            .checkbox-list {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🌍 Geospatial Analytics Dashboard</h1>
+    </div>
+
+    <div class="container">
+        <div class="sidebar">
+            <div class="section">
+                <h3>📁 Upload Your Area</h3>
+                <div class="upload-box" onclick="document.getElementById('fileInput').click()">
+                    <div class="upload-text">Click here to upload file</div>
+                    <div class="file-info">
+                        Supports: GeoJSON files (.geojson, .json)<br>
+                        Maximum size: 5MB
+                    </div>
+                </div>
+                <input type="file" id="fileInput" accept=".geojson,.json" style="display: none;">
+                
+                <div id="fileInfo" style="margin-top: 10px; display: none;">
+                    <strong>File loaded:</strong> <span id="fileName"></span><br>
+                    <small>Features: <span id="featureCount"></span></small>
+                </div>
+            </div>
+            <div class="section">
+                <h3>🛰️ Analysis Settings</h3>
+                
+                <div class="form-group">
+                    <label class="form-label">Satellite Data Source</label>
+                    <select class="form-select" id="satelliteSource" style="font-size:12px">
+                        <option value="sentinel2">Sentinel-2</option>
+                        <option value="landsat8">Landsat-8</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Date Range</label>
+                    <div class="date-row">
+                        <input type="date" class="form-input" id="startDate" style="font-size:12px">
+                        <input type="date" class="form-input" id="endDate" style="font-size:12px">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Cloud Cover (Maximum %)</label>
+                    <input type="range" id="cloudCover" min="0" max="100" value="15" style="width: 320px;"
+                           oninput="document.getElementById('cloudValue').textContent = this.value + '%'">
+                    <div style="text-align: center; margin-top: 5px; font-size:12px; font-weight:bold;">
+                        <span id="cloudValue">15%</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>🌱 What to Analyze</h3>
+                <div class="checkbox-list" style="font-size: 12px; font-family: 'Inter', sans-serif;">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ndvi" checked>
+                        <label for="ndvi">NDVI</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="evi" checked>
+                        <label for="evi">EVI</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="ndwi" checked>
+                        <label for="ndwi">NDWI</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="savi" checked>
+                        <label for="savi">SAVI</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="layer-controls" id="layerControls">
+                <h4 style="font-size: 16px;">🗺️ Map Layers</h4>
+                <div class="layer-item">
+                    <input type="checkbox" id="rgbLayer" checked>
+                    <label for="rgbLayer">Satellite Imagery (False Color)</label>
+                </div>
+                <div id="indexLayers"></div>
+            </div>
+
+            <div class="section">
+                <button class="btn btn-primary" id="processBtn" disabled>
+                    🚀 Start Analysis
+                </button>
+                <button class="btn btn-secondary" id="clearBtn">
+                    🗑️ Clear All
+                </button>
+                <button class="btn btn-secondary" id="downloadBtn" disabled>
+                    💾 Download Results
+                </button>
+            </div>
+
+            <div class="results" id="resultsPanel">
+                <h4>📊 Analysis Results</h4>
+                <div id="statsContainer"></div>
+            </div>
+        </div>
+
+        <div class="map-area">
+            <div id="map"></div>
+            
+            <div class="pixel-info" id="pixelInfo">
+                
+            </div>
+            
+            <div class="chart-container" id="chartContainer">
+                <div class="chart-header">
+                    <div class="chart-controls">
+                        <strong>Time Series Chart:</strong>
+                        <label><input type="radio" name="chartIndex" value="NDVI" checked> NDVI</label>
+                        <label><input type="radio" name="chartIndex" value="EVI"> EVI</label>
+                        <label><input type="radio" name="chartIndex" value="NDWI"> NDWI</label>
+                        <label><input type="radio" name="chartIndex" value="SAVI"> SAVI</label>
+                        
+                        <div class="dataset-toggles">
+                            <label><input type="checkbox" id="showMean" checked> Mean</label>
+                            <label><input type="checkbox" id="showMin"> Min</label>
+                            <label><input type="checkbox" id="showMax"> Max</label>
+                        </div>
+                    </div>
+                     
+                    <button class="toggle-btn" id="chartToggle" onclick="toggleChart()">Minimize</button>
+                </div>
+                <canvas id="timeSeriesChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="loading" id="loadingOverlay">
+        <div class="spinner"></div>
+        <div class="loading-text" id="loadingText">Processing your analysis...</div>
+    </div>
+
+    <div class="message success" id="successMessage"></div>
+    <div class="message error" id="errorMessage"></div>
+
+    <script>
+        let map;
+        let uploadedArea = null;
+        let analysisResults = null;
+        let visualizationLayers = {};
+        let timeSeriesChart = null;
+        let uploadedFile = null;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            setupMap();
+            setupEventListeners();
+            setDefaultDates();
+            showMessage('Welcome! Upload a GeoJSON file to get started.', 'success');
+        });
+
+        function setupMap() {
+            map = L.map('map').setView([20, 86], 5);
+            
+            const streetLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors'
+            }).addTo(map);
+
+            const satelliteLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri'
+            });
+
+            const baseMaps = {
+                "Street Map": streetLayer,
+                "Satellite": satelliteLayer
+            };
+            L.control.layers(baseMaps).addTo(map);
+
+            map.on('click', handleMapClick);
+
+            console.log('Map initialized successfully');
+        }
+
+        function setupEventListeners() {
+            document.getElementById('fileInput').addEventListener('change', handleFileUpload);
+            document.getElementById('processBtn').addEventListener('click', startAnalysis);
+            document.getElementById('clearBtn').addEventListener('click', clearEverything);
+            document.getElementById('downloadBtn').addEventListener('click', downloadResults);
+            
+            // Chart radio button listeners
+            document.querySelectorAll('input[name="chartIndex"]').forEach(radio => {
+                radio.addEventListener('change', updateChart);
+            });
+
+            document.getElementById('showMean').addEventListener('change', updateChart);
+            document.getElementById('showMin').addEventListener('change', updateChart);
+            document.getElementById('showMax').addEventListener('change', updateChart);
+        }
+
+        function handleMapClick(e) {
+            const lat = e.latlng.lat;
+            const lng = e.latlng.lng;
+            
+            let pixelInfo = `<strong>Coordinates:</strong><br>Lat: ${lat.toFixed(6)}<br>Lng: ${lng.toFixed(6)}<br><br>`;
+            
+            if (analysisResults && analysisResults.stats) {
+                pixelInfo += '<strong>Area Statistics:</strong><br>';
+                Object.entries(analysisResults.stats).forEach(([key, value]) => {
+                    if (key.startsWith('mean_') && value !== null) {
+                        const index = key.replace('mean_', '');
+                        pixelInfo += `${index}: ${value}<br>`;
+                    }
+                });
+            } else {
+                pixelInfo += 'Run analysis to see pixel values';
+            }
+            
+            const pixelInfoDiv = document.getElementById('pixelInfo');
+            pixelInfoDiv.innerHTML = pixelInfo;
+            pixelInfoDiv.style.display = 'block';
+            
+            setTimeout(() => {
+                pixelInfoDiv.style.display = 'none';
+            }, 5000);
+        }
+
+        function toggleChart() {
+            const chartContainer = document.getElementById('chartContainer');
+            const chartToggle = document.getElementById('chartToggle');
+            const mapDiv = document.getElementById('map');
+            
+            if (chartContainer.classList.contains('minimized')) {
+                chartContainer.classList.remove('minimized');
+                chartToggle.textContent = 'Minimize';
+                if (timeSeriesChart) {
+                    setTimeout(() => timeSeriesChart.resize(), 300);
+                }
+            } else {
+                chartContainer.classList.add('minimized');
+                chartToggle.textContent = 'Maximize';
+            }
+            
+            // Trigger map resize after layout change
+            setTimeout(() => {
+                if (map) {
+                    map.invalidateSize();
+                }
+            }, 300);
+        }
+
+        function setDefaultDates() {
+            const today = new Date();
+            const threeMonthsAgo = new Date();
+            threeMonthsAgo.setMonth(today.getMonth() - 3);
+
+            document.getElementById('endDate').value = today.toISOString().split('T')[0];
+            document.getElementById('startDate').value = threeMonthsAgo.toISOString().split('T')[0];
+        }
+
+        function handleFileUpload(event) {
+            const file = event.target.files[0];
+            
+            if (!file) return;
+
+            if (file.size > 5 * 1024 * 1024) {
+                showMessage('File is too large! Please use a file smaller than 5MB.', 'error');
+                return;
+            }
+
+            if (!file.name.toLowerCase().endsWith('.geojson') && !file.name.toLowerCase().endsWith('.json')) {
+                showMessage('Please upload a GeoJSON file (.geojson or .json)', 'error');
+                return;
+            }
+
+            uploadedFile = file;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const geoJsonData = JSON.parse(e.target.result);
+                    loadAreaOnMap(geoJsonData, file.name);
+                } catch (error) {
+                    showMessage('Error reading file. Please make sure it\'s a valid GeoJSON file.', 'error');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function loadAreaOnMap(geoJsonData, fileName) {
+            if (uploadedArea) {
+                map.removeLayer(uploadedArea);
+            }
+
+            uploadedArea = L.geoJSON(geoJsonData, {
+                style: {
+                    color: '#2d5a27',
+                    weight: 3,
+                    fillColor: '#90EE90',
+                    fillOpacity: 0.3
+                },
+                onEachFeature: function(feature, layer) {
+                    let popupText = '<b>Your Analysis Area</b><br>';
+                    if (feature.properties && feature.properties.name) {
+                        popupText += 'Name: ' + feature.properties.name + '<br>';
+                    }
+                    popupText += 'Click \"Start Analysis\" to begin!';
+                    layer.bindPopup(popupText);
+                }
+            }).addTo(map);
+
+            map.fitBounds(uploadedArea.getBounds());
+
+            document.getElementById('fileName').textContent = fileName;
+            document.getElementById('featureCount').textContent = geoJsonData.features ? geoJsonData.features.length : 1;
+            document.getElementById('fileInfo').style.display = 'block';
+            document.getElementById('processBtn').disabled = false;
+
+            showMessage('Area loaded successfully! You can now start the analysis.', 'success');
+        }
+
+        async function startAnalysis() {
+            if (!uploadedArea || !uploadedFile) {
+                showMessage('Please upload an area first!', 'error');
+                return;
+            }
+
+            const selectedIndices = [];
+            if (document.getElementById('ndvi').checked) selectedIndices.push('NDVI');
+            if (document.getElementById('evi').checked) selectedIndices.push('EVI');
+            if (document.getElementById('ndwi').checked) selectedIndices.push('NDWI');
+            if (document.getElementById('savi').checked) selectedIndices.push('SAVI');
+
+            if (selectedIndices.length === 0) {
+                showMessage('Please select at least one vegetation index to analyze!', 'error');
+                return;
+            }
+
+            showLoading('Analyzing your area... This may take a few minutes.');
+
+            try {
+                const formData = new FormData();
+                formData.append('file', uploadedFile);
+                formData.append('startDate', document.getElementById('startDate').value);
+                formData.append('endDate', document.getElementById('endDate').value);
+                formData.append('satellite', document.getElementById('satelliteSource').value);
+                formData.append('cloudPercentage', document.getElementById('cloudCover').value);
+                formData.append('indices', JSON.stringify(selectedIndices));
+
+                console.log('Sending analysis request to backend...');
+                
+                const response = await fetch('/api/analyze', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+                console.log('Analysis results received:', result);
+
+                if (response.ok && result.status === 200) {
+                    analysisResults = result.data;
+                    displayResults(analysisResults);
+                    addVisualizationLayers(analysisResults.visualization);
+                    createTimeSeriesChart(analysisResults.time_series, selectedIndices);
+                    showMessage('Analysis completed successfully!', 'success');
+                } else {
+                    throw new Error(result.message || 'Analysis failed');
+                }
+
+            } catch (error) {
+                console.error('Analysis error:', error);
+                showMessage('Analysis failed: ' + error.message, 'error');
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function displayResults(data) {
+            const statsContainer = document.getElementById('statsContainer');
+            statsContainer.innerHTML = '';
+
+            // Display stats
+            if (data.stats) {
+                Object.entries(data.stats).forEach(([key, value]) => {
+                    if (value !== null && value !== undefined) {
+                        const statRow = document.createElement('div');
+                        statRow.className = 'stat-row';
+                        
+                        const label = document.createElement('span');
+                        label.className = 'stat-label';
+                        label.textContent = formatStatLabel(key);
+                        
+                        const valueSpan = document.createElement('span');
+                        valueSpan.className = 'stat-value';
+                        valueSpan.textContent = value;
+                        
+                        statRow.appendChild(label);
+                        statRow.appendChild(valueSpan);
+                        statsContainer.appendChild(statRow);
+                    }
+                });
+            }
+
+            document.getElementById('resultsPanel').style.display = 'block';
+            document.getElementById('downloadBtn').disabled = false;
+        }
+
+        function formatStatLabel(key) {
+            const labels = {
+                'mean_NDVI': 'Average NDVI:',
+                'mean_EVI': 'Average EVI:',
+                'mean_NDWI': 'Average NDWI:',
+                'mean_SAVI': 'Average SAVI:',
+                'veg_cover_percent': 'Vegetation Cover (%):',
+                'total_area_km2': 'Total Area (sqkm):',
+                'healthy_area_km2': 'Healthy Area (sqkm):'
+            };
+            return labels[key] || key + ':';
+        }
+
+        function addVisualizationLayers(visualizationUrls) {
+            // Clear existing layers
+            Object.values(visualizationLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            visualizationLayers = {};
+
+            // Create layer controls
+            const indexLayersContainer = document.getElementById('indexLayers');
+            indexLayersContainer.innerHTML = '';
+
+            // Add RGB layer
+            if (visualizationUrls.rgb) {
+                visualizationLayers.rgb = L.tileLayer(visualizationUrls.rgb, {
+                    attribution: 'Google Earth Engine'
+                }).addTo(map);
+            }
+
+            // Add index layers
+            Object.entries(visualizationUrls).forEach(([index, url]) => {
+                if (index !== 'rgb') {
+                    visualizationLayers[index] = L.tileLayer(url, {
+                        attribution: 'Google Earth Engine'
+                    });
+
+                    // Create layer control
+                    const layerItem = document.createElement('div');
+                    layerItem.className = 'layer-item';
+                    
+                    const checkbox = document.createElement('input');
+                    checkbox.type = 'checkbox';
+                    checkbox.id = index + 'Layer';
+                    checkbox.addEventListener('change', function() {
+                        if (this.checked) {
+                            map.addLayer(visualizationLayers[index]);
+                        } else {
+                            map.removeLayer(visualizationLayers[index]);
+                        }
+                    });
+                    
+                    const label = document.createElement('label');
+                    label.htmlFor = index + 'Layer';
+                    label.textContent = index;
+                    
+                    layerItem.appendChild(checkbox);
+                    layerItem.appendChild(label);
+                    indexLayersContainer.appendChild(layerItem);
+                }
+            });
+
+            // RGB layer control
+            document.getElementById('rgbLayer').addEventListener('change', function() {
+                if (this.checked && visualizationLayers.rgb) {
+                    map.addLayer(visualizationLayers.rgb);
+                } else if (visualizationLayers.rgb) {
+                    map.removeLayer(visualizationLayers.rgb);
+                }
+            });
+
+            document.getElementById('layerControls').style.display = 'block';
+        }
+
+        function createTimeSeriesChart(timeSeriesData, indices) {
+            const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+            
+            if (timeSeriesChart) {
+                timeSeriesChart.destroy();
+            }
+
+            const selectedIndex = document.querySelector('input[name="chartIndex"]:checked').value;
+            
+            const datasets = [];
+            const baseColor = getIndexColor(selectedIndex);
+            
+            // Mean dataset
+            if (document.getElementById('showMean').checked) {
+                datasets.push({
+                    label: `${selectedIndex} Mean`,
+                    data: timeSeriesData.map(item => item[`mean_${selectedIndex}`]),
+                    borderColor: baseColor,
+                    backgroundColor: baseColor + '20',
+                    fill: false,
+                    tension: 0.4,
+                    borderWidth: 2
+                });
+            }
+            
+            // Min dataset
+            if (document.getElementById('showMin').checked) {
+                datasets.push({
+                    label: `${selectedIndex} Min`,
+                    data: timeSeriesData.map(item => item[`min_${selectedIndex}`]),
+                    borderColor: adjustColor(baseColor, -60),
+                    backgroundColor: adjustColor(baseColor, -60) + '20',
+                    fill: false,
+                    tension: 0.4,
+                    borderWidth: 1,
+                    borderDash: [5, 5]
+                });
+            }
+            
+            // Max dataset
+            if (document.getElementById('showMax').checked) {
+                datasets.push({
+                    label: `${selectedIndex} Max`,
+                    data: timeSeriesData.map(item => item[`max_${selectedIndex}`]),
+                    borderColor: adjustColor(baseColor, 60),
+                    backgroundColor: adjustColor(baseColor, 60) + '20',
+                    fill: false,
+                    tension: 0.4,
+                    borderWidth: 1,
+                    borderDash: [2, 2]
+                });
+            }
+
+            const chartData = {
+                labels: timeSeriesData.map(item => item.date),
+                datasets: datasets
+            };
+
+            timeSeriesChart = new Chart(ctx, {
+                type: 'line',
+                data: chartData,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: false,
+                            title: {
+                                display: true,
+                                text: selectedIndex + ' Value'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: true
+                        },
+                        title: {
+                            display: true,
+                            text: `${selectedIndex} Time Series`
+                        }
+                    }
+                }
+            });
+
+            document.getElementById('chartContainer').style.display = 'block';
+        }
+
+        function updateChart() {
+            if (analysisResults && analysisResults.time_series) {
+                const selectedIndex = document.querySelector('input[name="chartIndex"]:checked').value;
+                const baseColor = getIndexColor(selectedIndex);
+                
+                const datasets = [];
+                
+                // Mean dataset
+                if (document.getElementById('showMean').checked) {
+                    datasets.push({
+                        label: `${selectedIndex} Mean`,
+                        data: analysisResults.time_series.map(item => item[`mean_${selectedIndex}`]),
+                        borderColor: baseColor,
+                        backgroundColor: baseColor + '20',
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 2
+                    });
+                }
+                
+                // Min dataset
+                if (document.getElementById('showMin').checked) {
+                    datasets.push({
+                        label: `${selectedIndex} Min`,
+                        data: analysisResults.time_series.map(item => item[`min_${selectedIndex}`]),
+                        borderColor: adjustColor(baseColor, -60),
+                        backgroundColor: adjustColor(baseColor, -60) + '20',
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 1,
+                        borderDash: [5, 5]
+                    });
+                }
+                
+                // Max dataset
+                if (document.getElementById('showMax').checked) {
+                    datasets.push({
+                        label: `${selectedIndex} Max`,
+                        data: analysisResults.time_series.map(item => item[`max_${selectedIndex}`]),
+                        borderColor: adjustColor(baseColor, 60),
+                        backgroundColor: adjustColor(baseColor, 60) + '20',
+                        fill: false,
+                        tension: 0.4,
+                        borderWidth: 1,
+                        borderDash: [2, 2]
+                    });
+                }
+                
+                timeSeriesChart.data.datasets = datasets;
+                timeSeriesChart.options.scales.y.title.text = selectedIndex + ' Value';
+                timeSeriesChart.options.plugins.title.text = `${selectedIndex} Time Series`;
+                
+                timeSeriesChart.update();
+            }
+        }
+
+        function getIndexColor(index) {
+            const colors = {
+                'NDVI': '#228B22',
+                'EVI': '#32CD32',
+                'NDWI': '#4169E1',
+                'SAVI': '#FF8C00'
+            };
+            return colors[index] || '#666666';
+        }
+
+        function adjustColor(color, amount) {
+            // Convert hex to RGB, adjust brightness, convert back
+            const colorMatch = color.match(/^#([0-9a-f]{6})$/i);
+            if (!colorMatch) return color;
+            
+            const hex = colorMatch[1];
+            const num = parseInt(hex, 16);
+            
+            let r = (num >> 16) + amount;
+            let g = (num >> 8 & 0x00FF) + amount;
+            let b = (num & 0x0000FF) + amount;
+            
+            r = Math.max(0, Math.min(255, r));
+            g = Math.max(0, Math.min(255, g));
+            b = Math.max(0, Math.min(255, b));
+            
+            return '#' + ((r << 16) | (g << 8) | b).toString(16).padStart(6, '0');
+        }
+
+        function clearEverything() {
+            if (uploadedArea) {
+                map.removeLayer(uploadedArea);
+                uploadedArea = null;
+            }
+
+            Object.values(visualizationLayers).forEach(layer => {
+                if (map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            visualizationLayers = {};
+
+            if (timeSeriesChart) {
+                timeSeriesChart.destroy();
+                timeSeriesChart = null;
+            }
+
+            document.getElementById('fileInput').value = '';
+            document.getElementById('fileInfo').style.display = 'none';
+            document.getElementById('resultsPanel').style.display = 'none';
+            document.getElementById('layerControls').style.display = 'none';
+            document.getElementById('chartContainer').style.display = 'none';
+            document.getElementById('pixelInfo').style.display = 'none';
+            document.getElementById('processBtn').disabled = true;
+            document.getElementById('downloadBtn').disabled = false;
+
+            analysisResults = null;
+            uploadedFile = null;
+
+            showMessage('Everything cleared! Ready for a new analysis.', 'success');
+        }
+
+        function downloadResults() {
+            if (!analysisResults) {
+                showMessage('No results to download!', 'error');
+                return;
+            }
+
+            const resultsText = `Geospatial Analysis Results\nGenerated on: ${new Date().toLocaleDateString()}\n\n=== STATISTICS ===\n${Object.entries(analysisResults.stats).map(([key, value]) => 
+                `${formatStatLabel(key)} ${value}`).join('\n')}\n\n=== TIME SERIES DATA ===\n${analysisResults.time_series.map(item => 
+                `Date: ${item.date}\n${Object.entries(item).filter(([k, v]) => k !== 'date').map(([k, v]) => `  ${k}: ${v}`).join('\n')}`
+            ).join('\n\n')}\n\n=== ANALYSIS SETTINGS ===\n- Satellite: ${document.getElementById('satelliteSource').value}\n- Date Range: ${document.getElementById('startDate').value} to ${document.getElementById('endDate').value}\n- Cloud Cover: ${document.getElementById('cloudCover').value}%\n`;
+
+            const blob = new Blob([resultsText], { type: 'text/plain' });
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'geospatial_analysis_results.txt';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+
+            showMessage('Results downloaded successfully!', 'success');
+        }
+
+        function showLoading(message) {
+            document.getElementById('loadingText').textContent = message;
+            document.getElementById('loadingOverlay').style.display = 'block';
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').style.display = 'none';
+        }
+
+        function showMessage(message, type) {
+            const messageElement = document.getElementById(type + 'Message');
+            messageElement.textContent = message;
+            messageElement.style.display = 'block';
+
+            setTimeout(() => {
+                messageElement.style.display = 'none';
+            }, 5000);
+        }
+
+        window.addEventListener('resize', function() {
+            if (map) {
+                setTimeout(() => map.invalidateSize(), 100);
+            }
+        });
+    </script>
+</body>
+</html>

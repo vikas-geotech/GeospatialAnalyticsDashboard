@@ -235,10 +235,9 @@ Project Link: https://github.com/vikas-geotech/GeospatialAnalyticsDashboard
 
 ## 🔮 Future Enhancements
 
-- [ ] Support for additional satellites (Landsat 9)
-- [ ] Export results as .txt
+- [ ] Support for additional satellites (Landsat series, MODIS, etc..)
+- [ ] Export results as csv
 - [ ] User authentication and saved analyses
-- [ ] Batch processing for multiple areas
 - [ ] Advanced filtering and masking options
 - [ ] Integration with other environmental datasets
 \`\`\`

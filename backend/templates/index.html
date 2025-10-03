@@ -376,6 +376,194 @@
             border: 1px solid #f5c6cb;
         }
 
+        /* Added chatbot styles for bottom right corner */
+        .chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 380px;
+            height: 500px;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            flex-direction: column;
+            z-index: 2000;
+            transition: all 0.3s ease;
+        }
+
+        .chatbot-container.minimized {
+            height: 60px;
+            width: 200px;
+        }
+
+        .chatbot-header {
+            background: #609e58;
+            color: white;
+            padding: 15px;
+            border-radius: 12px 12px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+        }
+
+        .chatbot-header h3 {
+            margin: 0;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .chatbot-toggle {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 20px;
+            cursor: pointer;
+            padding: 0;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-toggle:hover {
+            opacity: 0.8;
+        }
+
+        .chatbot-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            background: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .chatbot-container.minimized .chatbot-messages {
+            display: none;
+        }
+
+        .chatbot-container.minimized .chatbot-input-area {
+            display: none;
+        }
+
+        .chat-message {
+            padding: 10px 12px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .chat-message.user {
+            background: #2d5a27;
+            color: white;
+            align-self: flex-end;
+            margin-left: auto;
+        }
+
+        .chat-message.assistant {
+            background: white;
+            color: #333;
+            align-self: flex-start;
+            border: 1px solid #e0e0e0;
+        }
+
+        .chat-message.system {
+            background: #fff3cd;
+            color: #856404;
+            align-self: center;
+            font-size: 12px;
+            text-align: center;
+            max-width: 90%;
+        }
+
+        .chatbot-input-area {
+            padding: 12px;
+            border-top: 1px solid #e0e0e0;
+            background: white;
+            border-radius: 0 0 12px 12px;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chatbot-input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: "Inter", sans-serif;
+        }
+
+        .chatbot-input:focus {
+            outline: none;
+            border-color: #2d5a27;
+        }
+
+        .chatbot-send {
+            background: #2d5a27;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .chatbot-send:hover {
+            background: #1f3d1b;
+        }
+
+        .chatbot-send:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .typing-indicator {
+            display: flex;
+            gap: 4px;
+            padding: 10px 12px;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            width: fit-content;
+        }
+
+        .typing-indicator span {
+            width: 8px;
+            height: 8px;
+            background: #2d5a27;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing-indicator span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+
+        .typing-indicator span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+
+        @keyframes typing {
+            0%, 60%, 100% {
+                transform: translateY(0);
+                opacity: 0.7;
+            }
+            30% {
+                transform: translateY(-10px);
+                opacity: 1;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -534,6 +722,32 @@
 
     <div class="message success" id="successMessage"></div>
     <div class="message error" id="errorMessage"></div>
+
+    <!-- Added AI Assistant Chatbot -->
+    <div class="chatbot-container" id="chatbotContainer">
+        <div class="chatbot-header" onclick="toggleChatbot()">
+            <h3>
+                <span>🤖</span>
+                <span>AI Assistant</span>
+            </h3>
+            <button class="chatbot-toggle" id="chatbotToggle">−</button>
+        </div>
+        <div class="chatbot-messages" id="chatbotMessages">
+            <div class="chat-message system">
+                Welcome! I'm your geospatial analytics assistant. How can I help you today?.
+            </div>
+        </div>
+        <div class="chatbot-input-area">
+            <input 
+                type="text" 
+                class="chatbot-input" 
+                id="chatbotInput" 
+                placeholder="Ask about NDVI, satellite data, etc..."
+                onkeypress="handleChatKeyPress(event)"
+            >
+            <button class="chatbot-send" id="chatbotSend" onclick="sendChatMessage()">Send</button>
+        </div>
+    </div>
 
     <script>
         let map;
@@ -1126,6 +1340,108 @@
             }, 5000);
         }
 
+        function toggleChatbot() {
+            const container = document.getElementById('chatbotContainer');
+            const toggle = document.getElementById('chatbotToggle');
+            
+            isChatbotMinimized = !isChatbotMinimized;
+            
+            if (isChatbotMinimized) {
+                container.classList.add('minimized');
+                toggle.textContent = '+';
+            } else {
+                container.classList.remove('minimized');
+                toggle.textContent = '−';
+            }
+        }
+
+        function handleChatKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendChatMessage();
+            }
+        }
+
+        async function sendChatMessage() {
+            const input = document.getElementById('chatbotInput');
+            const messagesContainer = document.getElementById('chatbotMessages');
+            const sendButton = document.getElementById('chatbotSend');
+            
+            const message = input.value.trim();
+            
+            if (!message) {
+                return;
+            }
+
+            // Add user message to chat
+            const userMessageDiv = document.createElement('div');
+            userMessageDiv.className = 'chat-message user';
+            userMessageDiv.textContent = message;
+            messagesContainer.appendChild(userMessageDiv);
+
+            // Clear input
+            input.value = '';
+            
+            // Disable send button
+            sendButton.disabled = true;
+
+            // Add typing indicator
+            const typingDiv = document.createElement('div');
+            typingDiv.className = 'typing-indicator';
+            typingDiv.innerHTML = '<span></span><span></span><span></span>';
+            messagesContainer.appendChild(typingDiv);
+
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message: message })
+                });
+
+                const result = await response.json();
+
+                // Remove typing indicator
+                messagesContainer.removeChild(typingDiv);
+
+                if (response.ok && result.status === 200) {
+                    // Add assistant response
+                    const assistantMessageDiv = document.createElement('div');
+                    assistantMessageDiv.className = 'chat-message assistant';
+                    assistantMessageDiv.textContent = result.response;
+                    messagesContainer.appendChild(assistantMessageDiv);
+                } else {
+                    // Add error message
+                    const errorMessageDiv = document.createElement('div');
+                    errorMessageDiv.className = 'chat-message system';
+                    errorMessageDiv.textContent = result.message || 'Failed to get response. Please try again.';
+                    messagesContainer.appendChild(errorMessageDiv);
+                }
+
+            } catch (error) {
+                // Remove typing indicator
+                if (messagesContainer.contains(typingDiv)) {
+                    messagesContainer.removeChild(typingDiv);
+                }
+
+                // Add error message
+                const errorMessageDiv = document.createElement('div');
+                errorMessageDiv.className = 'chat-message system';
+                errorMessageDiv.textContent = 'Connection error. Please ensure Ollama is running.';
+                messagesContainer.appendChild(errorMessageDiv);
+
+                console.error('Chat error:', error);
+            } finally {
+                // Re-enable send button
+                sendButton.disabled = false;
+                
+                // Scroll to bottom
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+        }
         window.addEventListener('resize', function() {
             if (map) {
                 setTimeout(() => map.invalidateSize(), 100);

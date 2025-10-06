@@ -376,11 +376,10 @@
             border: 1px solid #f5c6cb;
         }
 
-        /* Added chatbot styles for bottom right corner */
         .chatbot-container {
-            position: fixed;
-            bottom: 20px;
+            position: absolute; 
             right: 20px;
+            bottom: 20px; 
             width: 380px;
             height: 500px;
             background: white;
@@ -692,7 +691,7 @@
                 
             </div>
             
-            <div class="chart-container" id="chartContainer">
+        <div class="chart-container" id="chartContainer">
                 <div class="chart-header">
                     <div class="chart-controls">
                         <strong>Time Series Chart:</strong>
@@ -712,6 +711,31 @@
                 </div>
                 <canvas id="timeSeriesChart"></canvas>
             </div>
+            <!-- Injected Chatbot container so it is positioned relative to .map-area -->
+            <div class="chatbot-container" id="chatbotContainer">
+                <div class="chatbot-header" id="chatbotHeader">
+                    <h3>
+                        <span>🤖</span>
+                        <span>AI Assistant</span>
+                    </h3>
+                    <button class="chatbot-toggle" id="chatbotToggle">−</button>
+                </div>
+                <div class="chatbot-messages" id="chatbotMessages">
+                    <div class="chat-message system">
+                        Welcome! I'm your geospatial analytics assistant. How can I help you today?.
+                    </div>
+                </div>
+                <div class="chatbot-input-area" id="chatbotInputArea">
+                    <input 
+                        type="text" 
+                        class="chatbot-input" 
+                        id="chatbotInput" 
+                        placeholder="Ask about NDVI, satellite data, etc..."
+                        onkeypress="handleChatKeyPress(event)"
+                    >
+                    <button class="chatbot-send" id="chatbotSend" onclick="sendChatMessage()">Send</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -723,31 +747,8 @@
     <div class="message success" id="successMessage"></div>
     <div class="message error" id="errorMessage"></div>
 
-    <!-- Added AI Assistant Chatbot -->
-    <div class="chatbot-container" id="chatbotContainer">
-        <div class="chatbot-header" onclick="toggleChatbot()">
-            <h3>
-                <span>🤖</span>
-                <span>AI Assistant</span>
-            </h3>
-            <button class="chatbot-toggle" id="chatbotToggle">−</button>
-        </div>
-        <div class="chatbot-messages" id="chatbotMessages">
-            <div class="chat-message system">
-                Welcome! I'm your geospatial analytics assistant. How can I help you today?.
-            </div>
-        </div>
-        <div class="chatbot-input-area">
-            <input 
-                type="text" 
-                class="chatbot-input" 
-                id="chatbotInput" 
-                placeholder="Ask about NDVI, satellite data, etc..."
-                onkeypress="handleChatKeyPress(event)"
-            >
-            <button class="chatbot-send" id="chatbotSend" onclick="sendChatMessage()">Send</button>
-        </div>
-    </div>
+    <!-- Added AI Assistant Chatbot (moved into .map-area so it sits above the chart) -->
+    <!-- Chatbot will be injected into the .map-area at runtime to ensure correct stacking and placement -->
 
     <script>
         let map;
@@ -756,11 +757,13 @@
         let visualizationLayers = {};
         let timeSeriesChart = null;
         let uploadedFile = null;
+    let isChatbotMinimized = false;
 
         document.addEventListener('DOMContentLoaded', function() {
             setupMap();
             setupEventListeners();
             setDefaultDates();
+            setupChatbot();
             showMessage('Welcome! Upload a GeoJSON file to get started.', 'success');
         });
 
@@ -850,6 +853,8 @@
                 if (map) {
                     map.invalidateSize();
                 }
+                // reposition chatbot so it stays above chart when chart size changes
+                positionChatbot();
             }, 300);
         }
 
@@ -1343,16 +1348,79 @@
         function toggleChatbot() {
             const container = document.getElementById('chatbotContainer');
             const toggle = document.getElementById('chatbotToggle');
-            
+
+            // toggle state
             isChatbotMinimized = !isChatbotMinimized;
-            
+
             if (isChatbotMinimized) {
                 container.classList.add('minimized');
                 toggle.textContent = '+';
+                // when minimized reduce width/height for cleaner layout
+                container.style.width = '220px';
+                container.style.height = '60px';
             } else {
                 container.classList.remove('minimized');
                 toggle.textContent = '−';
+                container.style.width = '380px';
+                container.style.height = '500px';
             }
+
+            // reposition chatbot after toggling
+            positionChatbot();
+        }
+
+        function setupChatbot() {
+            // wire header and toggle button
+            const header = document.getElementById('chatbotHeader');
+            const toggle = document.getElementById('chatbotToggle');
+
+            header.addEventListener('click', toggleChatbot);
+            toggle.addEventListener('click', function(e) {
+                e.stopPropagation();
+                toggleChatbot();
+            });
+
+            // ensure chatbot is positioned relative to map-area
+            positionChatbot();
+
+            // reposition on window resize
+            window.addEventListener('resize', positionChatbot);
+        }
+
+        function positionChatbot() {
+            const container = document.getElementById('chatbotContainer');
+            const mapArea = document.querySelector('.map-area');
+            const chart = document.getElementById('chartContainer');
+
+            if (!container || !mapArea) return;
+
+            // Ensure chatbot is a child of map-area so absolute positioning is relative
+            if (container.parentElement !== mapArea) {
+                mapArea.appendChild(container);
+            }
+
+            // compute bottom offset so chatbot sits above the chart-container (if visible)
+            let bottomOffset = 20; // default gap from bottom of map-area
+
+            if (chart && chart.style.display !== 'none') {
+                // if chart is minimized, use its height
+                const chartRect = chart.getBoundingClientRect();
+                const mapRect = mapArea.getBoundingClientRect();
+
+                // distance from bottom of map-area to top of chart
+                const chartHeight = chartRect.height;
+
+                // place chatbot above the chart with a 20px gap
+                bottomOffset = chartHeight + 20;
+            }
+
+            // set styles
+            container.style.position = 'absolute';
+            container.style.right = '20px';
+            container.style.bottom = bottomOffset + 'px';
+
+            // ensure it appears above the chart visually
+            container.style.zIndex = 3000;
         }
 
         function handleChatKeyPress(event) {

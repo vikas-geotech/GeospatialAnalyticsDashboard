@@ -18,6 +18,7 @@ A powerful web-based geospatial analytics platform that leverages Google Earth E
 - **Statistical Insights**: Get mean, min, max values and vegetation cover percentages
 - **Export Results**: Download analysis results as text files
 - **Responsive Design**: Works seamlessly on desktop and mobile devices
+- **AI Assistant**: Ask geospatial analysis questions via /api/chat (powered by Ollama with Llama 3.1 model)
 
 ## 🚀 Prerequisites
 
@@ -27,6 +28,7 @@ Before you begin, ensure you have the following installed:
 - pip (Python package manager)
 - Google Earth Engine account ([Sign up here](https://earthengine.google.com/signup/))
 - GEE Service Account credentials (JSON key file)
+- Ollama running locally with llama3.1 model (for AI Assistant)
 
 ## 📦 Installation
 
@@ -155,6 +157,30 @@ Processes geospatial analysis for uploaded area.
   }
 }
 \`\`\`
+
+**POST /api/chat 🚀**
+
+Domain-specific AI Assistant that answers questions only about geospatial analytics, vegetation indices, and satellite imagery.
+
+Request (JSON):
+
+{ "message": "What is NDVI?" }
+
+
+**Response:**
+
+{
+  "message": "Success",
+  "response": "NDVI is the Normalized Difference Vegetation Index, used to measure vegetation greenness...",
+  "status": 200
+}
+
+
+**Notes:**
+
+-Requires Ollama running locally with llama3.1 model
+-The assistant is restricted to geospatial topics (Sentinel-2, Landsat-8, NDVI, EVI, NDWI, SAVI, AOI files, etc.)
+-If asked about unrelated topics, it will politely decline
 
 ## 🌱 Vegetation Indices Explained
 
